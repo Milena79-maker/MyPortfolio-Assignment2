@@ -1,81 +1,133 @@
+
 import User from "../models/user.model.js";
 import extend from "lodash/extend.js";
 import errorHandler from "./error.controller.js";
 import jwt from "jsonwebtoken";
+
+// CREATE USER / SIGN UP
 const create = async (req, res) => {
-  const user = new User(req.body);
+  const user = new User({
+    name: req.body.name,
+    email: req.body.email,
+    password: req.body.password
+  });
+
   try {
     await user.save();
+
     return res.status(200).json({
-      message: "Successfully signed up!",
+      message: "Successfully signed up!"
     });
   } catch (err) {
     return res.status(400).json({
-      error: errorHandler.getErrorMessage(err),
+      error: errorHandler.getErrorMessage(err)
     });
   }
 };
+
+// GET ALL USERS
 const list = async (req, res) => {
   try {
-    let users = await User.find().select("name email updated created");
-    res.json(users);
+    const users = await User.find()
+      .select("name email role updated created");
+
+    return res.json(users);
   } catch (err) {
     return res.status(400).json({
-      error: errorHandler.getErrorMessage(err),
+      error: errorHandler.getErrorMessage(err)
     });
   }
 };
+
+// FIND USER BY ID
 const userByID = async (req, res, next, id) => {
   try {
-    let user = await User.findById(id);
-    if (!user)
-      return res.status(400).json({
-        error: "User not found",
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        error: "User not found"
       });
+    }
+
     req.profile = user;
     next();
   } catch (err) {
     return res.status(400).json({
-      error: "Could not retrieve user",
+      error: "Could not retrieve user"
     });
   }
 };
+
+// READ USER
 const read = (req, res) => {
-  req.profile.hashed_password = undefined;
-  req.profile.salt = undefined;
-  return res.json(req.profile);
+  const user = req.profile.toObject();
+
+  delete user.hashed_password;
+  delete user.salt;
+
+  return res.json(user);
 };
+
+// UPDATE USER
 const update = async (req, res) => {
   try {
-    let user = req.profile;
-    user = extend(user, req.body);
+    const user = req.profile;
+
+    const allowedUpdates = {};
+
+    if (typeof req.body.name === "string") {
+      allowedUpdates.name = req.body.name;
+    }
+
+    if (typeof req.body.email === "string") {
+      allowedUpdates.email = req.body.email;
+    }
+
+    if (typeof req.body.password === "string" &&
+        req.body.password.length >= 6) {
+      allowedUpdates.password = req.body.password;
+    }
+
+    extend(user, allowedUpdates);
     user.updated = Date.now();
+
     await user.save();
-    user.hashed_password = undefined;
-    user.salt = undefined;
-    res.json(user);
+
+    const result = user.toObject();
+    delete result.hashed_password;
+    delete result.salt;
+
+    return res.json(result);
   } catch (err) {
     return res.status(400).json({
-      error: errorHandler.getErrorMessage(err),
+      error: errorHandler.getErrorMessage(err)
     });
   }
 };
+
+// DELETE USER
 const remove = async (req, res) => {
   try {
-    let user = req.profile;
-    let deletedUser = await user.deleteOne();
-    deletedUser.hashed_password = undefined;
-    deletedUser.salt = undefined;
-    res.json(deletedUser);
+    const user = req.profile;
+
+    await user.deleteOne();
+
+    return res.json({
+      message: "User deleted successfully"
+    });
   } catch (err) {
     return res.status(400).json({
-      error: errorHandler.getErrorMessage(err),
+      error: errorHandler.getErrorMessage(err)
     });
   }
 };
+
+// SIGN IN WITH JWT
 const signin = async (req, res) => {
   try {
     const { email, password } = req.body;
+
     const user = await User.findOne({ email });
 
     if (!user || !user.authenticate(password)) {
@@ -85,9 +137,13 @@ const signin = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { _id: user._id },
+      {
+        _id: user._id
+      },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      {
+        expiresIn: "1h"
+      }
     );
 
     return res.status(200).json({
@@ -95,7 +151,8 @@ const signin = async (req, res) => {
       user: {
         _id: user._id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role
       }
     });
   } catch (error) {
@@ -104,4 +161,13 @@ const signin = async (req, res) => {
     });
   }
 };
-export default { create, userByID, read, list, remove, update, signin };
+
+export default {
+  create,
+  userByID,
+  read,
+  list,
+  remove,
+  update,
+  signin
+};

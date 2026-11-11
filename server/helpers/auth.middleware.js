@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
-
-const requireAuth = (req, res, next) => {
+import User from "../models/user.model.js";
+const requireAuth = async (req, res, next) => {
   const authorization = req.headers.authorization;
 
   if (!authorization?.startsWith("Bearer ")) {
@@ -12,8 +12,21 @@ const requireAuth = (req, res, next) => {
   try {
     const token = authorization.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.auth = decoded;
-    next();
+
+const user = await User.findById(decoded._id);
+
+if (!user) {
+  return res.status(401).json({
+    message: "User not found."
+  });
+}
+
+req.auth = {
+  _id: user._id,
+  role: user.role
+};
+
+next();
   } catch (error) {
     return res.status(401).json({
       message: "Invalid or expired token."
@@ -29,3 +42,12 @@ export const requireOwner = (req, res, next) => {
   next();
 };
 export default requireAuth;
+export const requireAdmin = (req, res, next) => {
+  if (req.auth?.role !== "admin") {
+    return res.status(403).json({
+      message: "Access denied. Admin only.",
+    });
+  }
+
+  next();
+};
