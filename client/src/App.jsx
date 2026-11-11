@@ -7,7 +7,7 @@ import reactPortfolioImage from "./assets/reactportfolio.png";
 import oracleSqlImage from "./assets/oraclesql.png";
 import AuthForms from "./AuthForms";
 import ProjectManager from "./ProjectManager";
-
+import QualificationManager from "./QualificationManager";
 function App() {
   const [session, setSession] = useState(null);
 
@@ -340,6 +340,7 @@ function App() {
       <AuthForms onSessionChange={setSession} />
 
       <ProjectManager session={session} />
+      <QualificationManager session={session} />
     </div>
   );
 }
