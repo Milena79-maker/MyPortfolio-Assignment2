@@ -8,6 +8,7 @@ import oracleSqlImage from "./assets/oraclesql.png";
 import AuthForms from "./AuthForms";
 import ProjectManager from "./ProjectManager";
 import QualificationManager from "./QualificationManager";
+import ContactManager from "./ContactManager";
 function App() {
   const [session, setSession] = useState(null);
 
@@ -341,6 +342,7 @@ function App() {
 
       <ProjectManager session={session} />
       <QualificationManager session={session} />
+      <ContactManager session={session} />
     </div>
   );
 }
